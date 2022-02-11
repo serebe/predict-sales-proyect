@@ -1,0 +1,87 @@
+---
+title: "Proyecto kaggle"
+author: "Sebastian Restrepo Betancur, Maria Del Pilar, Karen Amaya"
+date: "8/2/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Lectura
+La siguiente es una lectura de algunas librerias necesarias y utilizadas para la solucion del modelo y el trabajo con las bases de datos
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+library(caret)
+library(e1071)
+library(gbm)
+library(data.table)
+library(tictoc)
+```
+
+# Lectura de las bases de datos
+
+Resumen de la lectura de los datos necesarios para la solucion del modelo y la creacion del mismo; la primera tabla muestra el modelo de ventas, el segundo de items que son de referencia y por ultimo pruebas que es la conclusion del modelo.
+
+```{r}
+ventas = read.csv("sales_train.csv")
+item = read.csv("items.csv")
+pruebas = read.csv("test.csv")
+```
+
+## Correccion y datos 
+el sguiente es el resumen de algunas correcciones a la base de datos, donde se utiliza merge para unir dos categorias necesarias a la hora de hacer la regresion, luego se procede a transformar variables factor tales como mes, año, dias y semana y algunos otras columnas dentro de estas.
+
+```{r}
+ventas = merge(ventas, item[,c("item_id", "item_category_id")], by = "item_id", all.x = T)
+ventas$date = as.Date(ventas$date, "%d.%m.%Y")
+
+ventas$year = year(ventas$date)
+ventas$year =  as.factor(ventas$year)
+
+ventas$month = month(ventas$date)
+ventas$month = as.factor(ventas$month)
+
+ventas$day = day(ventas$date)
+ventas$day = as.factor(ventas$day)
+
+ventas$weekdays =  weekdays(ventas$date)
+ventas$weekdays = as.factor(ventas$weekdays)
+
+ventas$shop_id = as.factor(ventas$shop_id)
+ventas$item_id =  as.factor(ventas$item_id)
+ventas$item_category_id =  as.factor(ventas$item_category_id)
+```
+
+## Modelos utilizados:
+Utilizamos dos modelos simples, el primero es el modelo de regresion lineal en el cual validamos cual era el mejor, el segundo es un modelo raiz para probar cual de los dos era mejor, al final concluimos el modelo lineal era mejor, submision hace referencia a las entregas
+      
+```{r}
+## modelo lineal 
+modelo_lineal = lm(formula = item_cnt_day ~ shop_id + item_id,
+                  data = ventas) 
+
+resultado = predict(linear_model, pruebas[,c("shop_id","item_id")]) 
+
+submision =  data.frame(ID = pruebas$ID,
+                         item_cnt_month = result)
+head(submision)
+## modelo raiz 
+modelo_raiz1 = lm(formula = sqrt(item_cnt_day) ~ shop_id + item_id,
+                  data = ventas) 
+
+resultado2 = predict(modelo_raiz, pruebas[,c("shop_id","item_id")]) 
+
+submision2 =  data.frame(ID = pruebas$ID,
+                         item_cnt_month = result)
+write.csv(submission, file = "sub1.csv", row.names = F)
+write.csv(submission2, file = "sub2.csv", row.names = F)
+
+```
+
+# Nota:
+Queda un aspecto a validar por el lector debido a que por el peso de las bases de datos es dificil el manejo de estas 
